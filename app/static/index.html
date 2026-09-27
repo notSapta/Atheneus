@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATHENEUS | KYB Verification Agent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+  <div class="max-w-5xl mx-auto px-4 py-10">
+    <!-- Header -->
+    <div class="mb-8 border-b border-slate-800 pb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+          <span class="p-2 bg-indigo-600 rounded-lg text-xl">🛡️</span> ATHENEUS
+        </h1>
+        <p class="text-slate-400 mt-1 text-sm">Autonomous Know-Your-Business (KYB) Verification & Fraud Intelligence</p>
+      </div>
+      <span class="text-xs font-semibold px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">v1.0 Prototype</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Input Form -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-xl h-fit">
+        <h2 class="text-lg font-semibold text-white mb-4">Entity Parameters</h2>
+        <form id="verifyForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Company Name *</label>
+            <input type="text" id="company_name" required value="Infosys Limited"
+              class="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Country Code *</label>
+              <input type="text" id="country_code" required maxlength="2" value="IN"
+                class="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 uppercase" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">City</label>
+              <input type="text" id="city" value="Bengaluru"
+                class="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Full Street Address / Landmark</label>
+            <textarea id="raw_address" rows="2" placeholder="e.g. Gandhi Bazaar, Basavanagudi, Bengaluru, Karnataka 560004"
+              class="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Official Website (Leave blank for offline businesses)</label>
+            <input type="url" id="official_url" value="https://www.infosys.com"
+              class="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Registration ID (CIN/GST/Tax ID - Optional)</label>
+            <input type="text" id="registration_id" placeholder="Optional"
+              class="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+          </div>
+
+          <button type="submit" id="submitBtn"
+            class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 mt-4 shadow-lg shadow-indigo-600/30">
+            <span>Run Verification</span>
+          </button>
+        </form>
+
+        <!-- Quick Pre-loads -->
+        <div class="mt-6 pt-5 border-t border-slate-700/60">
+          <p class="text-xs text-slate-400 font-medium mb-2">Test Scenarios:</p>
+          <div class="flex flex-col gap-2">
+            <button type="button" onclick="fillForm('Infosys Limited', 'IN', 'Bengaluru', 'Electronics City, Hosur Road, Bengaluru 560100', 'https://www.infosys.com', '')" 
+              class="text-left text-xs bg-slate-700/40 hover:bg-slate-700 p-2 rounded text-slate-300 transition-colors">
+              🏢 Online Enterprise (Infosys)
+            </button>
+            <button type="button" onclick="fillForm('Tata Consultancy Services Limited', 'NG', 'Lagos', 'Victoria Island, Lagos', 'https://tata-consultancy-free-jobs-portal-login.xyz', 'FAKE-CIN-99999999-XYZ')" 
+              class="text-left text-xs bg-slate-700/40 hover:bg-slate-700 p-2 rounded text-rose-300 transition-colors">
+              🚨 Phishing / Spoofing (Fake TCS)
+            </button>
+            <button type="button" onclick="fillForm('Vidyarthi Bhavan', 'IN', 'Bengaluru', '32, Gandhi Bazaar Main Rd, Basavanagudi, Bengaluru 560004', '', '')" 
+              class="text-left text-xs bg-slate-700/40 hover:bg-slate-700 p-2 rounded text-amber-300 transition-colors">
+              ☕ Offline Local Business (Vidyarthi Bhavan)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Display -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Loading State -->
+        <div id="loadingBox" class="hidden bg-slate-800/40 border border-slate-700/60 rounded-xl p-10 text-center">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent mb-4"></div>
+          <p class="text-slate-300 font-medium">Running Autonomous Investigation...</p>
+          <p class="text-xs text-slate-500 mt-1">Cross-referencing registries, parsing filings, inspecting digital footprint.</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="bg-slate-800/30 border border-dashed border-slate-700/80 rounded-xl p-12 text-center text-slate-500">
+          <p class="text-base font-medium">No verification run yet</p>
+          <p class="text-xs mt-1">Select a test scenario or enter details to initiate verification.</p>
+        </div>
+
+        <!-- Result Container -->
+        <div id="resultBox" class="hidden space-y-6">
+          <!-- Top Verdict Card -->
+          <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-xl">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <span class="text-xs text-slate-400 font-medium uppercase tracking-wider">Verification Verdict</span>
+                <div class="flex items-center gap-3 mt-1">
+                  <span id="badgeStatus" class="px-4 py-1.5 rounded-lg text-sm font-bold tracking-wide">VERIFIED</span>
+                  <span id="badgeScore" class="text-slate-300 text-sm font-medium">Confidence: 96%</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-xs text-slate-400 font-medium uppercase tracking-wider">Identified Entity</span>
+                <p id="matchedName" class="text-sm font-semibold text-white mt-1">INFOSYS LIMITED</p>
+              </div>
+            </div>
+
+            <!-- Risk Signals Callout -->
+            <div id="riskContainer" class="mt-5 hidden">
+              <div class="bg-rose-500/10 border border-rose-500/30 rounded-lg p-3">
+                <p class="text-xs font-semibold text-rose-400 uppercase tracking-wide">⚠️ Risk Flags Detected</p>
+                <ul id="riskList" class="mt-1 list-disc list-inside text-xs text-rose-300 space-y-1"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Executive Summary Card -->
+          <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-xl">
+            <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-2">Executive Summary</h3>
+            <p id="summaryText" class="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-4 rounded-lg border border-slate-700/40"></p>
+          </div>
+
+          <!-- Corroborated Evidence Card -->
+          <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-xl">
+            <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-3">Public Registry & Evidence Trail</h3>
+            <div id="evidenceList" class="space-y-3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function fillForm(name, country, city, address, url, regId) {
+      document.getElementById('company_name').value = name;
+      document.getElementById('country_code').value = country;
+      document.getElementById('city').value = city;
+      document.getElementById('raw_address').value = address;
+      document.getElementById('official_url').value = url;
+      document.getElementById('registration_id').value = regId;
+    }
+
+    document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const emptyState = document.getElementById('emptyState');
+      const loadingBox = document.getElementById('loadingBox');
+      const resultBox = document.getElementById('resultBox');
+      const submitBtn = document.getElementById('submitBtn');
+
+      emptyState.classList.add('hidden');
+      resultBox.classList.add('hidden');
+      loadingBox.classList.remove('hidden');
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-50');
+
+      const rawAddress = document.getElementById('raw_address').value.trim();
+
+      const payload = {
+        name: document.getElementById('company_name').value.trim(),
+        official_url: document.getElementById('official_url').value.trim() || null,
+        registration_id: document.getElementById('registration_id').value.trim() || null,
+        raw_address: rawAddress || null,
+        address: {
+          street_address: rawAddress || null,
+          city: document.getElementById('city').value.trim() || "Unknown",
+          country: document.getElementById('country_code').value.trim().toUpperCase()
+        }
+      };
+
+      try {
+        const res = await fetch('/api/v1/corporate/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || "Server error");
+        }
+
+        const data = await res.json();
+        renderResult(data);
+      } catch (err) {
+        alert("Verification failed: " + err.message);
+      } finally {
+        loadingBox.classList.add('hidden');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50');
+      }
+    });
+
+    function renderResult(data) {
+      const resultBox = document.getElementById('resultBox');
+      const badgeStatus = document.getElementById('badgeStatus');
+      const badgeScore = document.getElementById('badgeScore');
+      const matchedName = document.getElementById('matchedName');
+      const summaryText = document.getElementById('summaryText');
+      const riskContainer = document.getElementById('riskContainer');
+      const riskList = document.getElementById('riskList');
+      const evidenceList = document.getElementById('evidenceList');
+
+      const status = data.status;
+      badgeStatus.textContent = status;
+      badgeStatus.className = 'px-4 py-1.5 rounded-lg text-sm font-bold tracking-wide ';
+      if (status === 'VERIFIED') {
+        badgeStatus.className += 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+      } else if (status === 'REJECTED') {
+        badgeStatus.className += 'bg-rose-500/20 text-rose-400 border border-rose-500/30';
+      } else {
+        badgeStatus.className += 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
+      }
+
+      badgeScore.textContent = `Confidence: ${(data.confidence_score * 100).toFixed(0)}%`;
+      matchedName.textContent = data.matched_legal_name || data.query.name;
+      summaryText.textContent = data.verification_summary;
+
+      riskList.innerHTML = '';
+      if (data.risk_signals && data.risk_signals.length > 0) {
+        data.risk_signals.forEach(r => {
+          const li = document.createElement('li');
+          li.textContent = r;
+          riskList.appendChild(li);
+        });
+        riskContainer.classList.remove('hidden');
+      } else {
+        riskContainer.classList.add('hidden');
+      }
+
+      evidenceList.innerHTML = '';
+      if (data.evidence && data.evidence.length > 0) {
+        data.evidence.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'bg-slate-900/60 border border-slate-700/50 p-3.5 rounded-lg text-xs';
+          card.innerHTML = `
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-semibold text-indigo-400">${item.source_title || 'Public Record'}</span>
+              <a href="${item.source_url}" target="_blank" class="text-slate-400 hover:text-white underline text-[11px]">View Source ↗</a>
+            </div>
+            <p class="text-slate-300 leading-relaxed">${item.snippet ? item.snippet.slice(0, 300) + '...' : 'No excerpt available'}</p>
+          `;
+          evidenceList.appendChild(card);
+        });
+      }
+
+      resultBox.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
